@@ -1,66 +1,62 @@
 Λαμπρόπουλος Κωνσταντίνος
 Γκέργκη Δημήτρης
 
-Η εργασία αυτή χρησιμοποιεί διάφορες μεθόδους αποθήκευσης δεδομένων ως προσομοίωση μίας βάσης δεδομένων.Αναλυτικότερα με τη χρήση της βιβλιοθήκης bf,
-δημιουργούνται 3 είδη αρχείων : Απλό HeapFile,StaticHashFile,SecondaryHashFile.
-Το απλό HeapFile αποτελεί τον πιο απλό τρόπο αποθήκευσης δεδομένων,όπου κάθε δεδομένο προς αποθήκευση,αποθηκεύεται στο τέλος του αρχείου.Τo HashFile χρησιμοποιώντας ένα HashFunction χωρίζει το αρχείο σε buckets και προσθέτει τα δεδομένα προς αποθήκευση στο αντίστοιχο bucket(συνήθως στα primary hash files το hash γίνεται στο primary key).Τέλος το SecondaryHashFile χρησιμοποιώντας ένα άλλο μέρος των δεδομένων προς αποθήκευση (εδώ το name από τα records) και μέσω του hash του name αποθηκεύεται στο SHT το block στο οποίο βρίσκεται το record στο HashFile και το name που έγινε hash.
 
-Υπάρχουν αναλυτικά σχόλια για τις υλοποιήσεις στα πηγαία αρχεία.
-Οι συναρτήσεις main που παραδίδονται έχουν και ένα τρόπο βαθμολόγησης ενός τυπικής εκτέλεσης για κάθε ένα από τα είδη database που ζητήθηκαν(Heap,Primary Hash,Secondary Hash).
-Όσον αφορά τις συναρτήσεις για κάθε ένα από τα databases,οι συναρτήσεις Create(),Open(),Close() είναι παρόμοιες σ'όλα τα πηγαία αρχεία.
+This project utilizes different methods of savind data ,and is used as a simulation of a database.In more detail,it uses the bf library to create and manage 3 different files:
+HeapFile,StaticHashFile,SecondaryHashFile.
+HeapFile is the simplest way to save data,where each data which is about to be saved,
+is saved at the end of file.HashFile utilizes a hash function and breaks the file down to bueckts,and saves the data to the correspoding bucket(in the primary hash files,hashing is being done to the primary key).
+Lastly,the SecondaryHashFile utilizes the name of a record(records are the data to be saved to the database) and hashes it ,and adds to the correspoding bucket the name and the blockID in which the whole record
+resides in the primary Hash File.
 
-Ειδικότερα η Create() αρχικοποιεί ένα αρχείο με το ζητούμενο όνομα και περνάει τα βασικά metadata στο πρώτο block(πχ file descriptor ή αριθμός buckets).
-Υπάρχει και ένα integer value τύπου type που βρίσκεται στην αρχή του block 0 ,που αν είναι 0 ειναι heap file,αν είναι 1 Primary Hash File,αν είναι 2 Secondary Hash File.
-Επίσης κλείνει το αρχείο που δημιουργήθηκε αφού δεν είναι σίγουρο ότι θα χρησιμοποιηθεί.
+There are detailed comments for the implementations in the *.c files.
+The main functions have a way of grading the performance of each implementation(Heap,Primary Hash,Secondary Hash).
+The Create(),Open(),Close() functions in all of the 3 implementations are the almost the same.
 
-Η open() ανοίγει το αρχείο με όνομα filename παίρνει το block 0 και ελέγχει το integer val για να δει αν ζητήθηκε να ανοιχτεί σωστό αρχείο.
-Αν είναι το σωστό αρχείο περνάει στην θέση filedesc του block 0 το νέο filedescriptor που του δίνει το επίπεδο BF και επιστρέφει τα metadata του αρχείου.
-Με την Open() μένει pinned το block 0 με τα metadata ,τ'οποίο θα γίνει unpin όταν πάμε να κλείσουμε το αρχείο.
+The Create() initializes the database file and saves the metadata to the first block(e.g. file descriptor,bucket size).
+There is also an integer value at the first block,which is used to identify which file we have.If it is 0 we have a heap file,
+if it is 1 Primary HashFile and if 2 SecondaryHashFile.The Create() also closes the filedescriptor correspoding to the file we opened(hence closes the file).
 
-H close() βρίσκει πρώτα το block0 του αρχείου που θέλουμε να κλείσουμε και το κάνει unpin και έπειτα κλείνει το αρχείο.
+The Open() opens a file given a filename variable,gets the first block and checks the integer value ,to check if the correct function was used to open the file.
+If all is done correctly ,it assigns to the variable filedesc(of the first block) the new filedescriptor given to the file from the BF level and returns the metadata of the file.
+By using Open() the first block is pinned and needs to be unpinned when we want to close the file. 
 
-Υλοιποίησεις Heap File: 
+The Close() unpins the first block the of the file we want to close,and then closes the file.
+
+Heap File Implementations:
+
 
 1)Insert Entries:
-H εισαγωγή γίνεται στο τέλος του .db αρχείου επομένως αν έχουμε παραπάνω από ένα block στο .db αρχείο ελέγχουμε αν το τελευταίο block έχει χώρο,
-αν ναι ,εισάγουμε τα records στο τέλος του block αυτού,αλλιώς δημιουργούμε νέο block και εισάγουμε τα records.
+The entry is inserted to the end of the .db file.In order to do that,we check if the last block allocated to the file has enough space for a record,and if it does,we insert it there.
+Differently we allocate a new block to the end of file and insert the new record there.
 
 2)Get All Entries:
-Τα δεδομένα είναι αποθηκευμένα τυχαία,οπότε πρέπει να κάνουμε brute force αναζήτηση σ'όλο το database.Άρα παίρνουμε κάθε block,
-ελέγχουμε κάθε record που έχει μέσα αν είναι αυτό που ψάχουμε,αν ναι εκτυπώνουμε το record και επιστρέφουμε τον αριθμό των blocks που
-ψάξαμε (δεν υπάρχουν διπλότυπα IDs).Αλλιώς ψάχνουμε στο επόμενο block.
+The records are saved randomly,so we use brute force search in the whole database.We check every block and every record,until we have the one we want.
+If we find it we print the record and return the number of blocks parsed(There are not duplicate keys).
 
-Υλοιποίησεις Primary Hash File: 
+Primary Hash File Implementations: 
 
 1)Insert Entry : 
-Η εισαγωγή γίνεται στο τέλος του bucket ,στο οποίο αντιστοιχεί το record.Βρίσκουμε το bucket με την χρήση του hash function,ελέγουμε από τα 
-metadata του αρχείου αν υπάρχει τουλάχιστον ένα block στο bucket (μέσω του hash array).Αν όχι ,τότε δημιουργούμε νέο block και προσθέτουμε το
-record και αντιστοιχούμε το bucket αυτό (το κελί του hash array με δείκτη με τιμή bucket) στο ID του block.Αλλιώς ψάχνουμε να βρούμε το τελευταίο
-block του bucket (κάθε block μέσα σ'ένα bucket δείχνει στο επόμενο block του bucket).Όταν το βρούμε ,ελέγχουμε αν έχει χώρο για να εισάγουμε το record,
-αλλιώς δημιοργούμε νέο block.Αν δημιουργήσουμε νέο block πρέπει όμως να θέσουμε το προηγούμενο block του bucket να δείχνει σε αυτό.
-Επομένως ψάχνουμε και βρίσκουμε το τελευταίο block του bucket και το θέτουμε να δείχνει στο νέο μας block.
+The entry is now inserted to the end of the bucket,which corresponds to the record.To find the bucket,we hash the primary key and the value returned by the hash
+corresponds to the bucket we will insert the record.We check by the metadata to find if the bucket already has blocks or not (using the HashArray).If it doesn't
+we allocate a new block and insert the record we set to the bucket (the correspoding cell of the hash array with a pointer to the bucket ID) the ID of the block.
+In any other case,we search for the last block of the bucket(the blocks in a bucket are a simple linked list).When we find it,we check if there is space for another record,
+if not we allocate a new block and must connect the previous one with this one. 
 
 2)Get All Entries :
-Βρίσκουυμε το bucket στο οποίο αντιστοιχεί η τιμή του κλειδιού που μας δίνεται (μέσω του hash function) και διανύουμε το bucket μέχρι να βρούμε 
-το ζητούμενο κλειδί.Όταν το βρούμε εκτυπώνουμε το Record και επιστρέφουμε τον αριθμό των blocks που ψάξαμε (μιάς και δεν υπάρχουν διπλότυπα).
+Find the bucket where the hash function leads us,and search the whole bucket until we have the record.Print the record and return the number of blocks written(there are not duplicate keys).
 
-Υλοιποίησεις Secondary Hash File:
+Secondary Hash File Implementations:
 
-1)Ο τρόπος εισαγωγής είναι παρόμοιος με του Primary Hash File,αυτό που αλλάζει είναι το κριτήριο εισαγωγής σ'ένα bucket και το τι εισάγουμε.
-Το hashing τώρα δεν γίνεται στο κλειδί ενός record,αλλά στο όνομα του,και δεν εισάγεται όλο το record αλλά μόνο το όνομα και το block στ'οποίο 
-βρίσκεται το record αυτό (στο Primary Hash File).Κατά τ'άλλα ο τρόπος εισαγωγής και λειτουργίας του bucket ως μία απλά συνδεδεμένη λίστα από blocks
-παραμένει ίδια.
+1)The record insertion is identical to the primary hash file,with the only difference being that instead of the primary key being hashed,now the name of the record is hashed.
 
-ΥΓ: Το όνομα και το block ID συγχωνεύονται στην struct sRecord που βρίσκεται στο sht_table.h .
+Note: The name and BlockID are being saved to the struct sRecord which resides in the sht_table.h.
 
 2)Get All Entries :
-Εδώ η αναζήτηση γίνεται βάσει το όνομα και όχι το κλειδί ενός record.Επομένως εφαρμόζουμε το hash function του SHT,βρίσκουμε το
-bucket στ'οποίο αντιστοιχεί και ψάχνουμε όλα τα blocks του bucket για το όνομα αυτό.Εδώ σε αντίθεση με τις παραπάνω Get All Entries,
-δεν σταματάμε στο πρώτο record που θα ταυτίζεται με το ζητούμενο,γιατί μπορεί να υπάρχουν και άλλα records με ίδιο όνομα.Επομένως ψάχνουμε
-την λίστα από blocks που αντιστοιχεί στο bucket μας και επιστρέφουμε τα blocks που ψάξαμε.Συνήθως είναι πολύ λίγα μιάς και κάθε block εδώ 
-χωράει 25 records σε αντίθεση με τα άλλα databases που χωράνε 6.
+The search is being done by the name and not the primary key.We use the hash function of the SHT to find the bucket in which the name resides.Here though,
+we have to check all the blocks in the bucket,since names are expected to have duplicate values.The search is much faster though,since each block has 26 records,
+and not 6 like in the Primary Hash File.
 
 Compilation:
-Για τις hp_main,ht_main,sht_main υπάρχει το makefile με τις εντολές make hp,make ht,make sht αντίστοιχα.Επίσης υπάρχει και makefile command
-για την hash statistics με εντολή make stats,και για να τρέξετε το εκτελέσιμο είναι ./build/stats_main .
-
+For the hp_main,ht_main,sht_main there is a makefile with the commands make hp,make ht,make sht.There is also a makefile command for the hash statistics function,which by using the commands make stats,you
+can run the executable :./build/stats_main .
